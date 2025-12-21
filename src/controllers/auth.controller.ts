@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { hashPassword, comparePassword, generateToken } from "../utils/auth.utils";
-import { Gender, PrismaClient, Role } from "../generated/prisma";
+import { Gender, PrismaClient, Role } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
