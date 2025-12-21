@@ -1,3 +1,6 @@
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
 const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-key';
 

@@ -7,6 +7,7 @@ import passport from "passport";
 import { jwtStrategy } from "./config/passport";
 import authRoutes from "./routes/auth.routes";
 import { clientAuthMiddleware } from "./middlewares/clientAuth.middleware";
+import videoRoutes from "./routes/video.routes";
 
 const app: Express = express();
 const PORT = 4000;
@@ -22,6 +23,7 @@ passport.use(jwtStrategy);
 app.use(clientAuthMiddleware);
 
 app.use("/api/auth", authRoutes);
+app.use('/api/videos', videoRoutes);
 
 // 2. 정적 파일 제공 (업로드된 동영상을 브라우저에서 접근 가능하게 함)
 // http://localhost:4000/uploads/파일명.mp4 로 접근 가능

@@ -54,6 +54,7 @@ export const signup = async (req: Request, res: Response) => {
 
         res.status(201).json({ message: "회원가입 성공!", userId: user.id });
     } catch (error) {
+        console.log(error);
         res.status(500).json({ message: "서버 에러가 발생했습니다." });
     }
 };

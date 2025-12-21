@@ -1,0 +1,40 @@
+paths:
+  /api/videos:
+    post:
+      summary: 동영상 업로드
+      tags: [Video]
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - video
+                - thumbnail
+              properties:
+                title:
+                  type: string
+                  example: "나의 첫 번째 브이로그"
+                description:
+                  type: string
+                  example: "안녕하세요 반갑습니다."
+                video:
+                  type: string
+                  format: binary
+                  description: "영상 파일 (mp4, mkv)"
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: "썸네일 이미지 (jpg, png)"
+      responses:
+        201:
+          description: 업로드 성공
+        400:
+          description: 파일 누락 또는 형식 오류
+        401:
+          description: 로그인 필요
