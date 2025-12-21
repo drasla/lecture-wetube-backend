@@ -1,6 +1,6 @@
+import { Role, User } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import passport from "passport";
-import { Role, User } from "../generated/prisma";
 
 // 1. 로그인 여부 체크 (Passport 이용)
 export const isAuthenticated = passport.authenticate("jwt", { session: false });
