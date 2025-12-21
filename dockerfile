@@ -4,6 +4,8 @@ FROM node:20-alpine
 # 2. 작업 디렉토리 설정
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 # 3. 패키지 파일 복사 및 설치
 COPY package*.json ./
 # bcrypt 등 네이티브 모듈 컴파일을 위해 필요한 도구 설치 (필요시)
