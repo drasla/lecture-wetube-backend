@@ -1,0 +1,156 @@
+paths:
+  /api/auth/signup:
+    post:
+      summary: 회원가입
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+                - nickname
+                - birthdate
+                - phoneNumber
+                - gender
+                - zipCode
+                - address1
+              properties:
+                username:
+                  type: string
+                  description: 사용자 ID
+                  example: "wetube_master"
+                email:
+                  type: string
+                  format: email
+                  example: "master@wetube.com"
+                password:
+                  type: string
+                  format: password
+                  example: "p4ssw0rd!"
+                nickname:
+                  type: string
+                  example: "동영상장인"
+                birthdate:
+                  type: string
+                  example: "1995-12-25"
+                phoneNumber:
+                  type: string
+                  example: "010-1234-5678"
+                gender:
+                  type: string
+                  enum: [ MALE, FEMALE ]
+                  example: "MALE"
+                zipCode:
+                  type: string
+                  example: "12345"
+                address1:
+                  type: string
+                  example: "서울시 강남구 테헤란로"
+                address2:
+                  type: string
+                  example: "101동 202호"
+                profileImage:
+                  type: string
+                  description: "프로필 이미지 경로 (업로드 후 반환된 URL)"
+                  example: "/uploads/profiles/default.png"
+      responses:
+        201:
+          description: 회원가입 성공
+        400:
+          description: 이미 존재하는 이메일
+
+  /api/auth/login:
+    post:
+      summary: 로그인
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: 사용자 ID
+                  example: "wetube_master"
+                password:
+                  type: string
+                  example: "p4ssw0rd!"
+      responses:
+        200:
+          description: 로그인 성공 (토큰 반환)
+
+  /api/auth/check-username:
+    post:
+      summary: 아이디 중복 체크
+      tags: [ Auth ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+                  example: "wetube_master"
+      responses:
+        200:
+          description: 중복 체크 결과 반환
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isAvailable:
+                    type: boolean
+                    description: true면 사용 가능, false면 중복됨
+                    example: true
+                  message:
+                    type: string
+                    example: "사용 가능한 아이디입니다."
+  /api/auth/profile:
+    patch:
+      summary: 프로필 정보 수정
+      description: "로그인한 유저의 정보를 수정합니다. (프로필 사진 포함)"
+      tags: [ Auth ]
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profileImage:
+                  type: string
+                  format: binary
+                  description: "이미지 파일 (jpg, png)"
+                nickname:
+                  type: string
+                phoneNumber:
+                  type: string
+                zipCode:
+                  type: string
+                address1:
+                  type: string
+                address2:
+                  type: string
+      responses:
+        200:
+          description: 수정 성공
+        401:
+          description: 로그인 필요

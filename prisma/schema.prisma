@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  username String @unique
+  email    String @unique
+  password String
+  nickname String
+
+  role         Role    @default(USER)
+  gender       Gender
+  profileImage String?
+
+  birthDate   String
+  phoneNumber String
+
+  zipCode  String
+  address1 String
+  address2 String?
+
+  videos    Video[]
+  inquiries Inquiry[]
+  histories VideoHistory[]
+  likes     VideoLike[]
+  comments  Comment[]
+}
+
+model Video {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title         String
+  description   String?
+  videoPath     String // 서버에 저장된 파일 경로
+  thumbnailPath String? // 썸네일 경로 (선택)
+  views         Int     @default(0)
+  likeCount     Int     @default(0)
+  authorId      Int
+  author        User    @relation(fields: [authorId], references: [id])
+
+  histories VideoHistory[]
+  likes     VideoLike[]
+  comments  Comment[]
+}
+
+model VideoHistory {
+  id Int @id @default(autoincrement())
+
+  userId   Int
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId  Int
+  video    Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
+
+  @@unique([userId, videoId])
+}
+
+model VideoLike {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  userId  Int
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId Int
+  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // 한 유저는 한 영상에 좋아요를 한 번만 누를 수 있음
+  @@unique([userId, videoId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  content String @db.Text
+
+  userId  Int
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId Int
+  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model Notice {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title     String
+  content   String @db.Text
+  viewCount Int    @default(0)
+}
+
+model Inquiry {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title      String
+  content    String    @db.Text
+  answer     String?   @db.Text
+  isAnswered Boolean   @default(false)
+  answeredAt DateTime?
+
+  authorId Int
+  author   User @relation(fields: [authorId], references: [id])
+}
