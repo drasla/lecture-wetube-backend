@@ -2,6 +2,8 @@ node_modules
 .idea
 # Keep environment variables out of version control
 .env
+firebase-key.json
+
 
 /prisma/migrations
 /src/generated/prisma

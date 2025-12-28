@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { hashPassword, comparePassword, generateToken } from "../utils/auth.utils";
 import { Gender, PrismaClient, Role } from "@prisma/client";
+import { uploadToFirebase } from "../utils/upload.utils";
 
 const prisma = new PrismaClient();
 
@@ -81,8 +82,26 @@ export const login = async (req: Request, res: Response) => {
 
         res.status(200).json({
             message: "로그인 성공",
-            token, // 프론트엔드는 이 토큰을 저장해야 함
-            user: { id: user.id, nickname: user.nickname, email: user.email },
+            token,
+            // ✨ [수정됨] 프론트엔드 상태 관리를 위해 유저의 모든 정보 반환 (비밀번호 제외)
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                nickname: user.nickname,
+                role: user.role,
+
+                // 상세 정보 추가
+                gender: user.gender,
+                birthDate: user.birthDate,
+                phoneNumber: user.phoneNumber,
+                zipCode: user.zipCode,
+                address1: user.address1,
+                address2: user.address2,
+                profileImage: user.profileImage,
+
+                createdAt: user.createdAt,
+            },
         });
     } catch (error) {
         res.status(500).json({ message: "서버 에러가 발생했습니다." });
@@ -122,6 +141,40 @@ export const checkUsername = async (req: Request, res: Response) => {
     }
 };
 
+export const checkNickname = async (req: Request, res: Response) => {
+    try {
+        const { nickname } = req.body;
+
+        // 1. 빈 값 체크
+        if (!nickname) {
+            return res.status(400).json({ message: "닉네임을 입력해주세요." });
+        }
+
+        // 2. DB 조회 (Prisma)
+        // nickname 필드에 @unique가 없더라도 findFirst로 검사 가능합니다.
+        const user = await prisma.user.findFirst({
+            where: { nickname },
+        });
+
+        if (user) {
+            // 이미 있음
+            return res.status(200).json({
+                isAvailable: false,
+                message: "이미 사용 중인 닉네임입니다.",
+            });
+        } else {
+            // 없음 (사용 가능)
+            return res.status(200).json({
+                isAvailable: true,
+                message: "사용 가능한 닉네임입니다.",
+            });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "서버 에러가 발생했습니다." });
+    }
+};
+
 export const updateProfile = async (req: Request, res: Response) => {
     try {
         // 1. 로그인된 유저 ID 가져오기 (req.user는 passport가 만들어줌)
@@ -131,13 +184,12 @@ export const updateProfile = async (req: Request, res: Response) => {
             return res.status(401).json({ message: "로그인이 필요합니다." });
         }
 
-        const { nickname, phoneNumber, zipCode, address1, address2 } = req.body;
+        const { nickname, phoneNumber, zipCode, address1, address2, gender, birthDate } = req.body;
 
         // 2. 파일이 업로드되었는지 확인
-        let profileImagePath = undefined;
+        let profileImageUrl: string | undefined = undefined;
         if (req.file) {
-            // 윈도우의 역슬래시(\)를 슬래시(/)로 바꿔줘야 브라우저에서 잘 보입니다.
-            profileImagePath = `/uploads/profiles/${req.file.filename}`;
+            profileImageUrl = await uploadToFirebase(req.file, "profiles");
         }
 
         // 3. DB 업데이트
@@ -149,17 +201,36 @@ export const updateProfile = async (req: Request, res: Response) => {
                 zipCode,
                 address1,
                 address2,
-                // 이미지가 있을 때만 업데이트 (undefined면 Prisma가 건드리지 않음)
-                profileImage: profileImagePath,
+                birthDate, // ✨ 업데이트 포함
+
+                // Gender Enum 타입 캐스팅 (값이 있을 경우에만)
+                ...(gender && { gender: gender as Gender }),
+
+                // 이미지가 새로 올라왔을 때만 업데이트
+                ...(profileImageUrl && { profileImage: profileImageUrl }),
             },
         });
 
         res.status(200).json({
             message: "프로필이 수정되었습니다.",
             user: {
+                id: updatedUser.id,
+                username: updatedUser.username,
+                email: updatedUser.email,
                 nickname: updatedUser.nickname,
-                profileImage: updatedUser.profileImage,
+                role: updatedUser.role,
+
+                // ✨ 빼먹지 않고 모두 포함!
+                gender: updatedUser.gender,
+                birthDate: updatedUser.birthDate,
                 phoneNumber: updatedUser.phoneNumber,
+                zipCode: updatedUser.zipCode,
+                address1: updatedUser.address1,
+                address2: updatedUser.address2,
+                profileImage: updatedUser.profileImage,
+
+                createdAt: updatedUser.createdAt,
+                updatedAt: updatedUser.updatedAt,
             },
         });
     } catch (error) {

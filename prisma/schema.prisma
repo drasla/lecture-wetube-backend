@@ -33,7 +33,7 @@ model User {
   username String @unique
   email    String @unique
   password String
-  nickname String
+  nickname String @unique
 
   role         Role    @default(USER)
   gender       Gender
@@ -70,6 +70,7 @@ model Video {
   histories VideoHistory[]
   likes     VideoLike[]
   comments  Comment[]
+  hashtags  Hashtag[]
 }
 
 model VideoHistory {
@@ -133,4 +134,13 @@ model Inquiry {
 
   authorId Int
   author   User @relation(fields: [authorId], references: [id])
+}
+
+model Hashtag {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name   String  @unique
+  videos Video[]
 }
