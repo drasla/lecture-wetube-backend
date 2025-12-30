@@ -46,11 +46,13 @@ model User {
   address1 String
   address2 String?
 
-  videos    Video[]
-  inquiries Inquiry[]
-  histories VideoHistory[]
-  likes     VideoLike[]
-  comments  Comment[]
+  videos        Video[]
+  inquiries     Inquiry[]
+  histories     VideoHistory[]
+  likes         VideoLike[]
+  comments      Comment[]
+  subscriptions Subscription[] @relation("Subscriber")
+  subscribers   Subscription[] @relation("Channel")
 }
 
 model Video {
@@ -105,10 +107,10 @@ model Comment {
 
   content String @db.Text
 
-  userId  Int
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  videoId Int
-  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  authorId Int
+  author   User  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  videoId  Int
+  video    Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 }
 
 model Notice {
@@ -143,4 +145,17 @@ model Hashtag {
 
   name   String  @unique
   videos Video[]
+}
+
+model Subscription {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  subscriberId Int
+  subscriber   User @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  channelId Int
+  channel   User @relation("Channel", fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, channelId])
 }

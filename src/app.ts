@@ -10,6 +10,8 @@ import { clientAuthMiddleware } from "./middlewares/clientAuth.middleware";
 import videoRoutes from "./routes/video.routes";
 import noticeRoutes from "./routes/notice.routes";
 import inquiryRoutes from "./routes/inquiry.routes";
+import SubscriptionRoutes from "./routes/subscription.routes";
+import commentRoutes from "./routes/comment.routes";
 
 const app: Express = express();
 const PORT = 4000;
@@ -28,6 +30,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/videos", videoRoutes);
 app.use("/api/notices", noticeRoutes);
 app.use("/api/inquiries", inquiryRoutes);
+app.use("/api/subscriptions", SubscriptionRoutes);
+app.use("/api/comments", commentRoutes);
 
 // 2. 정적 파일 제공 (업로드된 동영상을 브라우저에서 접근 가능하게 함)
 // http://localhost:4000/uploads/파일명.mp4 로 접근 가능

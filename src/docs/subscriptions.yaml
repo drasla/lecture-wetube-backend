@@ -1,0 +1,31 @@
+paths:
+  /api/subscriptions/{channelId}:
+    post:
+      summary: 채널 구독 토글
+      description: "특정 채널을 구독하거나 구독을 취소합니다. (로그인 필요)"
+      tags: [ Subscription ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema:
+            type: integer
+          description: 구독할 대상(채널)의 유저 ID
+      responses:
+        200:
+          description: 처리 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isSubscribed:
+                    type: boolean
+                    description: "변경 후 구독 상태 (true: 구독중, false: 구독취소)"
+                    example: true
+        400:
+          description: 잘못된 요청 (본인 구독 시도 등)
+        401:
+          description: 인증 실패
