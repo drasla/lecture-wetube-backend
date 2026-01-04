@@ -1,0 +1,109 @@
+paths:
+  /api/channels/{id}:
+    get:
+      summary: 채널(유저) 상세 정보 조회
+      description: "특정 유저의 프로필, 통계(구독자 수), 업로드한 동영상 목록을 조회합니다. (로그인 시 구독 여부 포함)"
+      tags: [ Channel ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 조회할 채널(유저) ID
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelDetail'
+        404:
+          description: 채널을 찾을 수 없음
+components:
+  schemas:
+    Video:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 10
+        title:
+          type: string
+          example: "리액트 강의 1강"
+        description:
+          type: string
+          nullable: true
+        videoPath:
+          type: string
+        thumbnailPath:
+          type: string
+          nullable: true
+        views:
+          type: integer
+          example: 150
+        likeCount:
+          type: integer
+          example: 12
+
+        # 👇 오늘/최근 추가된 필드들
+        isLiked:
+          type: boolean
+          nullable: true
+          description: "로그인 유저의 좋아요 여부"
+        isSubscribed:
+          type: boolean
+          nullable: true
+          description: "로그인 유저의 채널 구독 여부"
+        subscriberCount:
+          type: integer
+          description: "작성자의 구독자 수"
+
+        createdAt:
+          type: string
+          format: date-time
+        author:
+          $ref: '#/components/schemas/UserSummary' # 혹은 기존 object 정의
+
+    # ✨ [신규] 채널 상세 응답 스키마
+    ChannelDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          example: "test@example.com"
+        nickname:
+          type: string
+          example: "WeTube Official"
+        profileImage:
+          type: string
+          nullable: true
+          example: "https://via.placeholder.com/150"
+
+        # 통계 및 상태
+        subscriberCount:
+          type: integer
+          example: 1200
+        videoCount:
+          type: integer
+          example: 50
+        isSubscribed:
+          type: boolean
+          example: false
+
+        # 업로드한 비디오 목록
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Video'
+
+    # (참고용) 간단한 유저 정보 스키마 (Video 내 author 등에서 사용)
+    UserSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        nickname: { type: string }
+        profileImage: { type: string, nullable: true }

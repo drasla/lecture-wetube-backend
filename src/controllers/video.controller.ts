@@ -74,7 +74,7 @@ export const uploadVideo = async (req: Request, res: Response) => {
 export const getVideos = async (req: Request, res: Response) => {
     try {
         const page = Number(req.query.page) || 1;
-        const limit = 20; // 한 번에 20개씩
+        const limit = 24; // 한 번에 20개씩
 
         const videos = await prisma.video.findMany({
             take: limit,
