@@ -1,31 +1,31 @@
 paths:
   /api/videos:
     get:
-      summary: 동영상 목록 조회
-      description: "최신순으로 동영상 목록을 조회합니다."
+      summary: 전체 동영상 목록 조회
       tags: [ Video ]
       parameters:
         - in: query
           name: page
-          schema:
-            type: integer
-            default: 1
-          description: 페이지 번호
+          schema: { type: integer, default: 1 }
         - in: query
           name: limit
-          schema:
-            type: integer
-            default: 20
-          description: 가져올 개수
+          schema: { type: integer, default: 24 }
       responses:
         200:
           description: 조회 성공
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Video'
+                type: object
+                properties:
+                  videos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Video'
+                  total: { type: integer }
+                  page: { type: integer }
+                  totalPages: { type: integer }
+                  hasNextPage: { type: boolean }
 
     post:
       summary: 동영상 업로드
@@ -190,6 +190,63 @@ paths:
                   $ref: '#/components/schemas/Video'
         401:
           description: 인증 실패
+  /api/videos/liked:
+    get:
+      summary: 좋아요 표시한 동영상 조회
+      description: "로그인한 유저가 좋아요를 누른 동영상 목록을 최신순으로 조회합니다."
+      tags: [ Video ]
+      security:
+        - bearerAuth: [ ]
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+        401:
+          description: 인증 실패
+  /api/videos/subscribed:
+    get:
+      summary: 구독 채널 영상 조회
+      description: "로그인한 유저가 구독 중인 채널들의 동영상을 최신순으로 조회합니다."
+      tags: [ Video ]
+      security:
+        - bearerAuth: [ ]
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+  /api/videos/search:
+    get:
+      summary: 비디오 검색
+      description: "제목 또는 설명에 키워드가 포함된 동영상을 검색합니다."
+      tags: [ Video ]
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+          description: 검색할 키워드
+      responses:
+        200:
+          description: 검색 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Video'
+        400:
+          description: 검색어 누락
 
 components:
   schemas:

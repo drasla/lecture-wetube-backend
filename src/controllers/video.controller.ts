@@ -73,25 +73,38 @@ export const uploadVideo = async (req: Request, res: Response) => {
 // ✨ 전체 영상 목록 조회 (최신순)
 export const getVideos = async (req: Request, res: Response) => {
     try {
+        // 1. 쿼리 파라미터 처리 (기본값: 1페이지, 24개씩)
         const page = Number(req.query.page) || 1;
-        const limit = 24; // 한 번에 20개씩
+        const limit = Number(req.query.limit) || 24;
+        const skip = (page - 1) * limit;
 
-        const videos = await prisma.video.findMany({
-            take: limit,
-            // skip: (page - 1) * limit, // 무한스크롤 구현 시 주석 해제
-            orderBy: { createdAt: "desc" },
-            include: {
-                author: {
-                    select: {
-                        id: true,
-                        nickname: true,
-                        profileImage: true,
+        // 2. 비디오 목록과 전체 개수를 동시에 조회 (Transaction)
+        const [videos, total] = await prisma.$transaction([
+            prisma.video.findMany({
+                skip, // 앞에서부터 몇 개 건너뛸지
+                take: limit, // 몇 개 가져올지
+                orderBy: { createdAt: "desc" },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            nickname: true,
+                            profileImage: true,
+                        },
                     },
                 },
-            },
-        });
+            }),
+            prisma.video.count(), // 전체 비디오 개수 카운트
+        ]);
 
-        res.status(200).json(videos);
+        // 3. 응답 (데이터 + 페이지네이션 정보)
+        res.status(200).json({
+            videos,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+            hasNextPage: page * limit < total, // 다음 페이지가 있는지 여부 (무한스크롤에 유용)
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "영상 목록을 불러오지 못했습니다." });
@@ -259,23 +272,125 @@ export const getVideoHistory = async (req: Request, res: Response) => {
                 video: {
                     include: {
                         author: {
-                            select: { id: true, nickname: true, profileImage: true }
-                        }
-                    }
-                }
-            }
+                            select: { id: true, nickname: true, profileImage: true },
+                        },
+                    },
+                },
+            },
         });
 
         // 프론트엔드에서 Video[] 형태로 쓰기 편하게 데이터 구조 변환
         // history.video 객체들을 추출하여 리스트로 만듦
         const videos = histories.map(history => ({
             ...history.video,
-            viewedAt: history.viewedAt // 시청 시각 정보가 필요하다면 추가
+            viewedAt: history.viewedAt, // 시청 시각 정보가 필요하다면 추가
         }));
 
         res.status(200).json(videos);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "시청 기록 조회 실패" });
+    }
+};
+
+export const getLikedVideos = async (req: Request, res: Response) => {
+    try {
+        const user = req.user as { id: number };
+        const page = Number(req.query.page) || 1;
+        const limit = 20;
+
+        // 1. VideoLike 테이블에서 조회
+        const likes = await prisma.videoLike.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: "desc" }, // 최근에 좋아요 누른 순
+            take: limit,
+            // skip: (page - 1) * limit, // 페이지네이션 필요 시 주석 해제
+            include: {
+                video: {
+                    include: {
+                        author: {
+                            select: { id: true, nickname: true, profileImage: true },
+                        },
+                    },
+                },
+            },
+        });
+
+        // 2. 프론트엔드에서 쓰기 편하게 Video 객체 배열로 변환
+        const videos = likes.map(like => ({
+            ...like.video,
+            likedAt: like.createdAt, // (선택사항) 언제 좋아요 눌렀는지 정보가 필요하다면
+        }));
+
+        res.status(200).json(videos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "좋아요 목록 조회 실패" });
+    }
+};
+
+export const getSubscribedVideos = async (req: Request, res: Response) => {
+    try {
+        const user = req.user as { id: number };
+        const page = Number(req.query.page) || 1;
+        const limit = 20;
+
+        // Prisma 관계 쿼리:
+        // "Video"를 찾는데, "author(작성자)"의 "subscribers(구독자 목록)" 중에
+        // "subscriberId"가 "나(user.id)"인 경우가 하나라도 있는 비디오만 가져와라.
+        const videos = await prisma.video.findMany({
+            where: {
+                author: {
+                    subscribers: {
+                        some: {
+                            subscriberId: user.id,
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: "desc" }, // 최신순
+            take: limit,
+            // skip: (page - 1) * limit,
+            include: {
+                author: {
+                    select: { id: true, nickname: true, profileImage: true },
+                },
+            },
+        });
+
+        res.status(200).json(videos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "구독 영상 목록 조회 실패" });
+    }
+};
+
+export const searchVideos = async (req: Request, res: Response) => {
+    try {
+        const { q } = req.query; // /api/videos/search?q=검색어
+
+        if (!q || typeof q !== "string") {
+            return res.status(400).json({ message: "검색어를 입력해주세요." });
+        }
+
+        const videos = await prisma.video.findMany({
+            where: {
+                OR: [
+                    { title: { contains: q } }, // 제목에 포함되어 있거나
+                    { description: { contains: q } }, // 설명에 포함되어 있으면 검색
+                ],
+            },
+            orderBy: { createdAt: "desc" }, // 최신순 정렬
+            include: {
+                author: {
+                    select: { id: true, nickname: true, profileImage: true },
+                },
+            },
+        });
+
+        res.status(200).json(videos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "검색 중 오류가 발생했습니다." });
     }
 };

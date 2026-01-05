@@ -1,10 +1,8 @@
 /api/inquiries:
   get:
-    summary: 문의 목록 조회
-    description: "일반 유저는 본인 글만, 관리자는 전체 글을 조회합니다."
-    tags: [Inquiry]
-    security:
-      - bearerAuth: []
+    summary: 내 문의 내역 조회
+    description: "로그인한 사용자가 작성한 1:1 문의 목록을 조회합니다."
+    tags: [ Inquiry ]
     parameters:
       - in: query
         name: page
@@ -15,10 +13,6 @@
     responses:
       200:
         description: 조회 성공
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/InquiryListResponse'
 
   post:
     summary: 문의 등록
@@ -39,52 +33,200 @@
       201:
         description: 등록 성공
 
-  /api/inquiries/{id}:
-    get:
-      summary: 문의 상세 조회
-      description: "본인이 작성한 글이거나 관리자만 조회 가능합니다."
-      tags: [Inquiry]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer }
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Inquiry'
-        403:
-          description: 권한 없음 (본인 글 아님)
+/api/inquiries/all:
+  get:
+    summary: "[관리자] 전체 문의 내역 조회"
+    description: "모든 사용자의 1:1 문의 목록을 조회합니다."
+    tags: [Inquiry]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: query
+        name: page
+        schema: { type: integer, default: 1 }
+    responses:
+      200:
+        description: 조회 성공
+      403:
+        description: 관리자 권한 필요
 
-  /api/inquiries/{id}/answer:
-    patch:
-      summary: 문의 답변 등록 (관리자)
-      tags: [Inquiry]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: integer }
-      requestBody:
+/api/inquiries/{id}:
+  get:
+    summary: 문의 상세 조회
+    description: "본인이 작성한 글이거나 관리자만 조회 가능합니다."
+    tags: [Inquiry]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
         required: true
+        schema: { type: integer }
+    responses:
+      200:
+        description: 조회 성공
         content:
           application/json:
             schema:
-              type: object
-              required: [answer]
-              properties:
-                answer: { type: string, example: "환불은 마이페이지에서 가능합니다." }
-      responses:
-        200:
-          description: 답변 등록 성공
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Inquiry'
+              $ref: '#/components/schemas/Inquiry'
+      403:
+        description: 권한 없음 (본인 글 아님)
+  patch:
+    summary: 문의 내역 수정
+    description: "작성자가 자신의 문의 내용을 수정합니다."
+    tags: [ Inquiry ]
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title: { type: string }
+              content: { type: string }
+    responses:
+      200:
+        description: 수정 성공
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inquiry'
+      403:
+        description: 권한 없음
+  delete:
+    summary: 문의 내역 삭제
+    description: "작성자 본인 또는 관리자가 문의 내역을 삭제합니다."
+    tags: [ Inquiry ]
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+    responses:
+      200:
+        description: 삭제 성공
+      403:
+        description: 권한 없음
+      404:
+        description: 문의를 찾을 수 없음
+
+/api/inquiries/{id}/answer:
+  patch:
+    summary: 문의 답변 등록 또는 수정 (관리자)
+    tags: [Inquiry]
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [answer]
+            properties:
+              answer: { type: string, example: "환불은 마이페이지에서 가능합니다." }
+    responses:
+      200:
+        description: 답변 등록 성공
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inquiry'
+  delete:
+    summary: 문의 답변 삭제 (관리자)
+    description: "관리자가 등록된 답변을 삭제하고, 문의를 '답변 대기' 상태로 되돌립니다."
+    tags: [ Inquiry ]
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+    responses:
+      200:
+        description: 삭제(초기화) 성공
+      403:
+        description: 관리자 권한 필요
+
+components:
+  schemas:
+    Inquiry:
+      type: object
+      description: "1:1 문의 정보"
+      properties:
+        id:
+          type: integer
+          description: "문의 ID"
+          example: 15
+
+        title:
+          type: string
+          description: "문의 제목"
+          example: "동영상 업로드가 안 됩니다."
+
+        content:
+          type: string
+          description: "문의 내용"
+          example: "mp4 파일인데 업로드 중 멈춥니다. 확인 부탁드려요."
+
+        # 답변 관련 필드
+        answer:
+          type: string
+          nullable: true
+          description: "관리자 답변 내용 (미답변 시 null)"
+          example: "네트워크 상태를 확인해 주세요."
+
+        isAnswered:
+          type: boolean
+          description: "답변 완료 여부 (true: 답변완료, false: 대기중)"
+          example: true
+
+        answeredAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: "답변이 등록된 시간"
+
+        # 날짜 정보
+        createdAt:
+          type: string
+          format: date-time
+          description: "문의 작성일"
+        updatedAt:
+          type: string
+          format: date-time
+          description: "최근 수정일"
+
+        # 작성자 정보 (관리자 모드 조회 시 주로 사용)
+        author:
+          type: object
+          description: "작성자 정보 (내 문의 조회 시에는 포함되지 않을 수 있음)"
+          properties:
+            id:
+              type: integer
+              example: 5
+            email:
+              type: string
+              example: "user@example.com"
+            nickname:
+              type: string
+              example: "유튜버꿈나무"
+            profileImage:
+              type: string
+              nullable: true
+              example: "https://via.placeholder.com/150"
