@@ -1,0 +1,167 @@
+paths:
+  /api/admin/stats:
+    get:
+      summary: 관리자 대시보드 데이터 조회
+      description: "대시보드 상단 통계(회원/영상/조회수/미답변문의)와 최근 활동 내역(최근 가입자, 최근 영상)을 조회합니다."
+      tags: [ Admin ]
+      security:
+        - bearerAuth: [ ]
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  # 1. 상단 통계 카드 데이터
+                  stats:
+                    type: object
+                    properties:
+                      totalUsers:
+                        type: integer
+                        description: 총 회원 수
+                        example: 1250
+                      totalVideos:
+                        type: integer
+                        description: 총 동영상 수
+                        example: 340
+                      totalViews:
+                        type: integer
+                        description: 누적 조회수
+                        example: 154000
+                      pendingInquiries:
+                        type: integer
+                        description: 답변 대기중인 1:1 문의 수
+                        example: 3
+
+                  # 2. 최근 가입 회원 (5명)
+                  recentUsers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        email: { type: string, example: "newbie@example.com" }
+                        nickname: { type: string, example: "신입회원" }
+                        profileImage: { type: string, nullable: true }
+                        createdAt: { type: string, format: date-time }
+
+                  # 3. 최근 업로드 영상 (5개)
+                  recentVideos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        title: { type: string, example: "새로운 영상입니다" }
+                        thumbnailPath: { type: string, nullable: true }
+                        views: { type: integer }
+                        createdAt: { type: string, format: date-time }
+                        author:
+                          type: object
+                          properties:
+                            nickname: { type: string, example: "유튜버" }
+        403:
+          description: 관리자 권한 필요
+  /api/admin/users:
+    get:
+      summary: 전체 회원 목록 조회 (관리자)
+      description: "관리자가 전체 회원의 정보를 조회합니다."
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSummary' # 또는 별도 AdminUser 스키마
+                  total: { type: integer }
+                  page: { type: integer }
+                  totalPages: { type: integer }
+        403:
+          description: 관리자 권한 필요
+  /api/admin/videos:
+    get:
+      summary: 전체 영상 목록 조회 (관리자)
+      description: "관리자가 시스템에 등록된 모든 동영상을 최신순으로 조회합니다."
+      tags: [ Admin ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: 페이지 번호
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  videos:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Video'
+                        - type: object
+                          properties:
+                            author:
+                              type: object
+                              properties:
+                                email: { type: string }
+                                nickname: { type: string }
+                  total:
+                    type: integer
+                    example: 100
+                  page:
+                    type: integer
+                    example: 1
+                  totalPages:
+                    type: integer
+                    example: 10
+        403:
+          description: 관리자 권한 필요
+
+    /api/admin/videos/{id}:
+      delete:
+        summary: 영상 강제 삭제 (관리자)
+        description: "관리자 권한으로 특정 영상을 강제로 삭제합니다. (복구 불가)"
+        tags: [ Admin ]
+        security:
+          - bearerAuth: [ ]
+        parameters:
+          - in: path
+            name: id
+            required: true
+            schema:
+              type: integer
+            description: 삭제할 영상 ID
+        responses:
+          200:
+            description: 삭제 성공
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message: { type: string, example: "관리자 권한으로 영상이 삭제되었습니다." }
+          403:
+            description: 관리자 권한 필요
+          404:
+            description: 영상을 찾을 수 없음
